@@ -7,7 +7,10 @@ in vec2 vTexCoords;
 //uniform sampler2D tex;
 //uniform sampler2D nuage;
 
+out vec3 fFragColor;
+
 void main()
 {
-      //  gl_FragColor = texture(tex, vTexCoords)+texture(nuage,vTexCoords);
+  fFragColor = vec3(1, 0, 0);
+      //  fFragColor = texture(tex, vTexCoords)+texture(nuage,vTexCoords);
 }

@@ -23,11 +23,12 @@ int Application::run()
         // Put here rendering code
 		      const auto fbSize = m_GLFWHandle.framebufferSize();
 		      glViewport(0, 0, fbSize.x, fbSize.y);
-          glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+           glClear(GL_COLOR_BUFFER_BIT);
 
         {
           glBindVertexArray(vao_cube);
-          glDrawElements(GL_TRIANGLES, sphere.indexBuffer.size(), GL_UNSIGNED_INT, nullptr);
+          // glDrawElements(GL_TRIANGLES, sphere.indexBuffer.size(), GL_UNSIGNED_INT, nullptr);
+          glDrawArrays(GL_TRIANGLES, 0, 3);
         }
           /*  glBindVertexArray(vao_sphere);
             glDrawElements(GL_TRIANGLES, sphere.indexBuffer.size(), GL_UNSIGNED_INT, nullptr);*/
@@ -67,19 +68,32 @@ Application::Application(int argc, char** argv):
 {
     ImGui::GetIO().IniFilename = m_ImGuiIniFilename.c_str(); // At exit, ImGUI will store its windows positions in this file
 
+    const auto program = glmlv::compileProgram({ m_ShadersRootPath / m_AppName / "forward.vs.glsl",
+      m_ShadersRootPath / m_AppName / "forward.fs.glsl"});
+      program.use();
+
     // Put here initialization code
-    SimpleGeometry cube = glmlv::makeCube();
-    SimpleGeometry sphere = glmlv::makeSphere(13);
+    cube = glmlv::makeCube();
+    sphere = glmlv::makeSphere(13);
 
     glGenBuffers(1, &vbo_cube);
     glGenBuffers(1, &ibo_cube);
 
-    glBindBuffer(GL_ARRAY_BUFFER, vbo_cube);
-    glBufferStorage(GL_ARRAY_BUFFER, sphere.vertexBuffer.size() * sizeof(Vertex3f3f2f), sphere.vertexBuffer.data(), 0);
-    glBindBuffer(GL_ARRAY_BUFFER, 0);
-    glBindBuffer(GL_ARRAY_BUFFER, ibo_cube);
-    glBufferStorage(GL_ARRAY_BUFFER, sphere.indexBuffer.size() * sizeof(uint32_t), sphere.indexBuffer.data(), 0);
-    glBindBuffer(GL_ARRAY_BUFFER, 0);
+    // glBindBuffer(GL_ARRAY_BUFFER, vbo_cube);
+    // glBufferStorage(GL_ARRAY_BUFFER, sphere.vertexBuffer.size() * sizeof(Vertex3f3f2f), sphere.vertexBuffer.data(), 0);
+    // glBindBuffer(GL_ARRAY_BUFFER, 0);
+    // glBindBuffer(GL_ARRAY_BUFFER, ibo_cube);
+    // glBufferStorage(GL_ARRAY_BUFFER, sphere.indexBuffer.size() * sizeof(uint32_t), sphere.indexBuffer.data(), 0);
+    // glBindBuffer(GL_ARRAY_BUFFER, 0);
+
+    GLfloat vertices[] = { -0.5f, -0.5f, // premier sommet
+    0.5f, -0.5f,// deuxième sommet
+    0.0f, 0.5f// troisième sommet
+     };
+
+     glBindBuffer(GL_ARRAY_BUFFER, vbo_cube);
+     glBufferStorage(GL_ARRAY_BUFFER, sizeof(vertices), vertices, 0);
+
 
   /*  GLuint vbo_sphere,ibo_sphere;
     glGenBuffers(1, &vbo_sphere);
@@ -103,22 +117,25 @@ Application::Application(int argc, char** argv):
     const GLint normalAttrLocation = 1;
     const GLint texCoordsAttrLocation = 2;
 
+    glEnableVertexAttribArray(positionAttrLocation);
+    glVertexAttribPointer(positionAttrLocation, 2, GL_FLOAT, GL_FALSE, 0, 0);
+
         // We tell OpenGL what vertex attributes our VAO is describing:
-        glEnableVertexAttribArray(positionAttrLocation);
-        glEnableVertexAttribArray(normalAttrLocation);
-        glEnableVertexAttribArray(texCoordsAttrLocation);
-
-        glBindBuffer(GL_ARRAY_BUFFER, vbo_cube);
-        glVertexAttribPointer(positionAttrLocation, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex3f3f2f), (const GLvoid*)offsetof(Vertex3f3f2f, position));
-        glVertexAttribPointer(normalAttrLocation, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex3f3f2f), (const GLvoid*)offsetof(Vertex3f3f2f, normal));
-        glVertexAttribPointer(texCoordsAttrLocation, 2, GL_FLOAT, GL_FALSE, sizeof(Vertex3f3f2f), (const GLvoid*)offsetof(Vertex3f3f2f, texCoords));
-
-        glBindBuffer(GL_ARRAY_BUFFER, 0);
-        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ibo_cube);
+        // glEnableVertexAttribArray(positionAttrLocation);
+        // glEnableVertexAttribArray(normalAttrLocation);
+        // glEnableVertexAttribArray(texCoordsAttrLocation);
+        //
+        // glBindBuffer(GL_ARRAY_BUFFER, vbo_cube);
+        // glVertexAttribPointer(positionAttrLocation, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex3f3f2f), (const GLvoid*)offsetof(Vertex3f3f2f, position));
+        // glVertexAttribPointer(normalAttrLocation, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex3f3f2f), (const GLvoid*)offsetof(Vertex3f3f2f, normal));
+        // glVertexAttribPointer(texCoordsAttrLocation, 2, GL_FLOAT, GL_FALSE, sizeof(Vertex3f3f2f), (const GLvoid*)offsetof(Vertex3f3f2f, texCoords));
+        //
+        // glBindBuffer(GL_ARRAY_BUFFER, 0);
+        // glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ibo_cube);
         glBindVertexArray(0);
 
 
 
-    glEnable(GL_DEPTH_TEST);
+    // glEnable(GL_DEPTH_TEST);
 
 }
