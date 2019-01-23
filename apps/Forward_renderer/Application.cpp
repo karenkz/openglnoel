@@ -21,6 +21,19 @@ int Application::run()
 		glViewport(0, 0, fbSize.x, fbSize.y);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
+  const auto projMatrix = glm::perspective(70.f, float(fbSize.x) / fbSize.y, 0.01f, 100.f);
+    const auto viewMatrix = m_viewController.getViewMatrix();
+
+    const auto modelMatrix = glm::rotate(glm::translate(glm::mat4(1), glm::vec3(-2, 0, 0)), 0.2f * float(seconds), glm::vec3(0, 1, 0));
+
+    const auto mvMatrix = viewMatrix * modelMatrix;
+    const auto mvpMatrix = projMatrix * mvMatrix;
+        const auto normalMatrix = glm::transpose(glm::inverse(mvMatrix));
+
+        glUniformMatrix4fv(m_uModelViewProjMatrixLocation, 1, GL_FALSE, glm::value_ptr(mvpMatrix));
+        glUniformMatrix4fv(m_uModelViewMatrixLocation, 1, GL_FALSE, glm::value_ptr(mvMatrix));
+        glUniformMatrix4fv(m_uNormalMatrixLocation, 1, GL_FALSE, glm::value_ptr(normalMatrix));
+
     glBindVertexArray(vao);
     glDrawElements(GL_TRIANGLES, sphere.indexBuffer.size(), GL_UNSIGNED_INT, nullptr);
 
@@ -30,6 +43,7 @@ int Application::run()
         {
             ImGui::Begin("GUI");
             ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / ImGui::GetIO().Framerate, ImGui::GetIO().Framerate);
+            ImGui::End();
 
         }
 
@@ -41,6 +55,7 @@ int Application::run()
         auto guiHasFocus = ImGui::GetIO().WantCaptureMouse || ImGui::GetIO().WantCaptureKeyboard;
         if (!guiHasFocus) {
             // Put here code to handle user interactions
+              m_viewController.update(float(ellapsedTime));
         }
 
 		m_GLFWHandle.swapBuffers(); // Swap front and back buffers
@@ -93,6 +108,15 @@ Application::Application(int argc, char** argv):
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ibo);
 
     glBindVertexArray(0);
+
+    m_program = glmlv::compileProgram({ m_ShadersRootPath / m_AppName / "forward.vs.glsl", m_ShadersRootPath / m_AppName / "forward.fs.glsl" });
+    m_program.use();
+
+        m_uModelViewProjMatrixLocation = glGetUniformLocation(m_program.glId(), "uModelViewProjMatrix");
+        m_uModelViewMatrixLocation = glGetUniformLocation(m_program.glId(), "uModelViewMatrix");
+        m_uNormalMatrixLocation = glGetUniformLocation(m_program.glId(), "uNormalMatrix");
+
+        m_viewController.setViewMatrix(glm::lookAt(glm::vec3(0, 0, 5), glm::vec3(0, 0, 0), glm::vec3(0, 1, 0)));
 
     glEnable(GL_DEPTH_TEST);
 

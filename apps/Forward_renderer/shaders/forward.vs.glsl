@@ -15,12 +15,9 @@ uniform mat4 uNormalMatrix;
 void main()
 {
 
-    vPosition=vec4(aPosition, 1);
-    vNormal= vec4(aNormal, 0);
-
-    vPosition = vec3(uModelViewMatrix * vPosition);
-	  vNormal = vec3(uNormalMatrix *vNormal);
+    vPosition = vec3(uModelViewMatrix * vec4(aPosition, 1));
+	  vNormal = vec3(uNormalMatrix *vec4(aNormal, 0));
 	  vTexCoords = aTexCoords;
 
-    gl_Position =  uModelViewProjMatrix * vPosition;
+    gl_Position =  uModelViewProjMatrix * vec4(aPosition, 1);
 }
