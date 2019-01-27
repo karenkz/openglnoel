@@ -1,9 +1,7 @@
 #include "Application.hpp"
 
 #include <iostream>
-
 #include <glmlv/Image2DRGBA.hpp>
-
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
 #include <glm/gtx/io.hpp>
@@ -28,6 +26,12 @@ int Application::run()
     const auto projMatrix = glm::perspective(70.f, float(fbSize.x) / fbSize.y, 0.01f, 100.f);
     const auto viewMatrix = m_viewController.getViewMatrix();
 
+
+        glUniform3fv(m_uDirectionalLightDirLocation, 1, glm::value_ptr(glm::vec3(viewMatrix * glm::vec4(glm::normalize(m_DirLightDirection), 0))));
+        glUniform3fv(m_uDirectionalLightIntensityLocation, 1, glm::value_ptr(m_DirLightColor * m_DirLightIntensity));
+        glUniform3fv(m_uPointLightPositionLocation, 1, glm::value_ptr(glm::vec3(viewMatrix * glm::vec4(m_PointLightPosition, 1))));
+        glUniform3fv(m_uPointLightIntensityLocation, 1, glm::value_ptr(m_PointLightColor * m_PointLightIntensity));
+
     const auto modelMatrix = glm::rotate(glm::translate(glm::mat4(1), glm::vec3(-2, 0, 0)), 0.2f * float(seconds), glm::vec3(0, 1, 0));
     const auto mvMatrix = viewMatrix * modelMatrix;
     const auto mvpMatrix = projMatrix * mvMatrix;
@@ -38,17 +42,15 @@ int Application::run()
     glUniformMatrix4fv(m_uModelViewMatrixLocation, 1, GL_FALSE, glm::value_ptr(mvMatrix));
     glUniformMatrix4fv(m_uNormalMatrixLocation, 1, GL_FALSE, glm::value_ptr(normalMatrix));
 
-    glUniform3fv(m_uDirectionalLightDirLocation, 1, glm::value_ptr(glm::vec3(viewMatrix * glm::vec4(glm::normalize(m_DirLightDirection), 0))));
-    glUniform3fv(m_uDirectionalLightIntensityLocation, 1, glm::value_ptr(m_DirLightColor * m_DirLightIntensity));
-    glUniform3fv(m_uPointLightPositionLocation, 1, glm::value_ptr(glm::vec3(viewMatrix * glm::vec4(m_PointLightPosition, 1))));
-    glUniform3fv(m_uPointLightIntensityLocation, 1, glm::value_ptr(m_PointLightColor * m_PointLightIntensity));
+    glUniform3fv(m_uKdLocation, 1, glm::value_ptr(CubeKd));
 
-    glActiveTexture(GL_TEXTURE0);
-    glUniform1i(m_uKdSamplerLocation, 0);
-    glBindSampler(0, texture_sample);
+    glBindTexture(GL_TEXTURE_2D, TextureKd_c);
 
     glBindVertexArray(vao_c);
     glDrawElements(GL_TRIANGLES, cube.indexBuffer.size(), GL_UNSIGNED_INT, nullptr);
+
+    glBindTexture(GL_TEXTURE_2D, 0);
+    glBindSampler(0, 0); // Unbind the sampler
 
 
         // GUI code:
@@ -156,15 +158,14 @@ Application::Application(int argc, char** argv):
     std::cout << "chemin:" <<m_TextureRootPath<<'\n';
   std::cout << "Début chargement image" << '\n';
 
-    glmlv::Image2DRGBA image = glmlv::readImage(m_TextureRootPath / m_AppName/"mes_textures" / "venusmap.png");
-std::cout << "chargement reussi" << '\n';
-    glGenTextures(1, &TextureKd_c);
+  glActiveTexture(GL_TEXTURE0);
+  glmlv::Image2DRGBA image = glmlv::readImage(m_TextureRootPath / m_AppName / "textures" / "images.png");
 
-    glActiveTexture(GL_TEXTURE0);
-    glBindTexture(GL_TEXTURE_2D, TextureKd_c);
+    std::cout << "chargement reussi" << '\n';
+    glGenTextures(1, &TextureKd_c);
+    glBindTexture(GL_TEXTURE_2D,TextureKd_c);
     glTexStorage2D(GL_TEXTURE_2D, 1, GL_RGB32F, image.width(), image.height());
     glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, image.width(), image.height(), GL_RGBA, GL_UNSIGNED_BYTE, image.data());
-
     glBindTexture(GL_TEXTURE_2D, 0);
 
     glGenSamplers(1, &texture_sample);
