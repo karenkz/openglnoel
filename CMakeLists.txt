@@ -126,6 +126,7 @@ set(
     glfw
     glmlv
     assimp
+    z
 )
 
 if(CMAKE_COMPILER_IS_GNUCXX AND NOT GLMLV_USE_BOOST_FILESYSTEM)

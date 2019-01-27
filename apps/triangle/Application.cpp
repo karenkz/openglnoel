@@ -2,57 +2,8 @@
 
 #include <iostream>
 
-#include <glm/glm.hpp>
-#include <imgui.h>
-
-int Application::run()
-{
-    float clearColor[3] = { 0, 0, 0 };
-    // Loop until the user closes the window
-    for (auto iterationCount = 0u; !m_GLFWHandle.shouldClose(); ++iterationCount)
-    {
-        const auto seconds = glfwGetTime();
-
-        glClear(GL_COLOR_BUFFER_BIT);
-
-        // Put here rendering code
-        glBindVertexArray(m_triangleVAO);
-
-        glDrawArrays(GL_TRIANGLES, 0, 3);
-
-        glBindVertexArray(0);
-
-        // GUI code:
-		glmlv::imguiNewFrame();
-
-        {
-            ImGui::Begin("GUI");
-            ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / ImGui::GetIO().Framerate, ImGui::GetIO().Framerate);
-            if (ImGui::ColorEdit3("clearColor", clearColor)) {
-                glClearColor(clearColor[0], clearColor[1], clearColor[2], 1.f);
-            }
-            ImGui::End();
-        }
-
-        const auto viewportSize = m_GLFWHandle.framebufferSize();
-        glViewport(0, 0, viewportSize.x, viewportSize.y);
-		glmlv::imguiRenderFrame();
-
-        /* Poll for and process events */
-        glfwPollEvents();
-
-        /* Swap front and back buffers*/
-        m_GLFWHandle.swapBuffers();
-
-        auto ellapsedTime = glfwGetTime() - seconds;
-        auto guiHasFocus = ImGui::GetIO().WantCaptureMouse || ImGui::GetIO().WantCaptureKeyboard;
-        if (!guiHasFocus) {
-            //viewController.update(float(ellapsedTime))
-        }
-    }
-
-    return 0;
-}
+#include <glm/gtc/matrix_transform.hpp>
+#include <glm/gtc/type_ptr.hpp>
 
 struct Vertex
 {
@@ -64,59 +15,103 @@ struct Vertex
     {}
 };
 
-Application::Application(int argc, char** argv):
-    m_AppPath{ glmlv::fs::path{ argv[0] } },
-    m_AppName{ m_AppPath.stem().string() },
-    m_ImGuiIniFilename{ m_AppName + ".imgui.ini" },
-    m_ShadersRootPath{ m_AppPath.parent_path() / "shaders" }
+int Application::run()
 {
-    glGenBuffers(1, &m_triangleVBO);
+  const auto program = glmlv::compileProgram({ m_ShadersRootPath / m_AppName / "forward.vs.glsl",
+    m_ShadersRootPath / m_AppName / "forward.fs.glsl"});
+    program.use();
 
-    Vertex triangleVertices[] = {
-        Vertex { glm::vec2(-0.5, -0.5), glm::vec3(1, 0, 0) },
-        Vertex { glm::vec2(0.5, -0.5), glm::vec3(0, 1, 0) },
-        Vertex { glm::vec2(0, 0.5), glm::vec3(0, 0, 1) }
-    };
+  glClearColor(1, 0, 0, 1);
+  Vertex triangleVertices[] = {
+      Vertex { glm::vec2(-0.5, -0.5), glm::vec3(1, 0, 0) },
+      Vertex { glm::vec2(0.5, -0.5), glm::vec3(0, 1, 0) },
+      Vertex { glm::vec2(0, 0.5), glm::vec3(0, 0, 1) }
+  };
 
-    glBindBuffer(GL_ARRAY_BUFFER, m_triangleVBO);
+  GLuint m_triangleVBO, m_triangleVAO;
 
-    glBufferStorage(GL_ARRAY_BUFFER, sizeof(triangleVertices), triangleVertices, 0);
+  glGenBuffers(1, &m_triangleVBO);
 
-    glBindBuffer(GL_ARRAY_BUFFER, 0);
+  glBindBuffer(GL_ARRAY_BUFFER, m_triangleVBO);
 
-    glGenVertexArrays(1, &m_triangleVAO);
+  glBufferStorage(GL_ARRAY_BUFFER, sizeof(triangleVertices), triangleVertices, 0);
 
-    // Vertex attrib locations are defined in the vertex shader (we can also use glGetAttribLocation(program, attribname) with attribute names after program compilation in order to get these numbers)
-    const GLint positionAttrLocation = 0;
-    const GLint colorAttrLocation = 1;
+  glBindBuffer(GL_ARRAY_BUFFER, 0);
+
+  glGenVertexArrays(1, &m_triangleVAO);
+
+  // Vertex attrib locations are defined in the vertex shader (we can also use glGetAttribLocation(program, attribname) with attribute names after program compilation in order to get these numbers)
+  const GLint positionAttrLocation = 0;
+  const GLint colorAttrLocation = 1;
+
+  glBindVertexArray(m_triangleVAO);
+
+  glBindBuffer(GL_ARRAY_BUFFER, m_triangleVBO);
+
+  glEnableVertexAttribArray(positionAttrLocation);
+  glVertexAttribPointer(positionAttrLocation, 2, GL_FLOAT, GL_FALSE, sizeof(Vertex), (const GLvoid*) offsetof(Vertex, position));
+
+  glEnableVertexAttribArray(colorAttrLocation);
+  glVertexAttribPointer(colorAttrLocation, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (const GLvoid*) offsetof(Vertex, color));
+
+  glBindBuffer(GL_ARRAY_BUFFER, 0);
+
+  glBindVertexArray(0);
+
+    // Loop until the user closes the window
+    for (auto iterationCount = 0u; !m_GLFWHandle.shouldClose(); ++iterationCount)
+    {
+        const auto seconds = glfwGetTime();
+
+
+        // Put here rendering code
+		const auto fbSize = m_GLFWHandle.framebufferSize();
+
+    program.use();
+		glClear(GL_COLOR_BUFFER_BIT);
 
     glBindVertexArray(m_triangleVAO);
+    glDrawArrays(GL_TRIANGLES, 0, 3);
 
-    glBindBuffer(GL_ARRAY_BUFFER, m_triangleVBO);
 
-    glEnableVertexAttribArray(positionAttrLocation);
-    glVertexAttribPointer(positionAttrLocation, 2, GL_FLOAT, GL_FALSE, sizeof(Vertex), (const GLvoid*) offsetof(Vertex, position));
+        // GUI code:
+		glmlv::imguiNewFrame();
 
-    glEnableVertexAttribArray(colorAttrLocation);
-    glVertexAttribPointer(colorAttrLocation, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (const GLvoid*) offsetof(Vertex, color));
+        {
+            ImGui::Begin("GUI");
+            ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / ImGui::GetIO().Framerate, ImGui::GetIO().Framerate);
 
-    glBindBuffer(GL_ARRAY_BUFFER, 0);
+            ImGui::End();
+        }
 
-    glBindVertexArray(0);
+		glmlv::imguiRenderFrame();
 
-    m_program = glmlv::compileProgram({ m_ShadersRootPath / m_AppName / "triangle.vs.glsl", m_ShadersRootPath / m_AppName / "triangle.fs.glsl" });
-    m_program.use();
+        glfwPollEvents(); // Poll for and process events
+
+
+        auto ellapsedTime = glfwGetTime() - seconds;
+        auto guiHasFocus = ImGui::GetIO().WantCaptureMouse || ImGui::GetIO().WantCaptureKeyboard;
+        if (!guiHasFocus) {
+
+            // Put here code to handle user interactions
+        }
+
+		m_GLFWHandle.swapBuffers(); // Swap front and back buffers
+
+    }
+
+    return 0;
 }
 
-Application::~Application()
+
+Application::Application(int argc, char** argv):
+    m_AppPath { glmlv::fs::path{ argv[0] } },
+    m_AppName { m_AppPath.stem().string() },
+    m_ImGuiIniFilename { m_AppName + ".imgui.ini" },
+    m_ShadersRootPath { m_AppPath.parent_path() / "shaders" }
+
 {
-    if (m_triangleVBO) {
-        glDeleteBuffers(1, &m_triangleVBO);
-    }
+    ImGui::GetIO().IniFilename = m_ImGuiIniFilename.c_str(); // At exit, ImGUI will store its windows positions in this file
+    // Put here code to run before rendering loop
 
-    if (m_triangleVAO) {
-        glDeleteBuffers(1, &m_triangleVAO);
-    }
-
-    glfwTerminate();
 }
