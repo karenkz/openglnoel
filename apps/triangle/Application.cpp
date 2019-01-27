@@ -63,6 +63,7 @@ int Application::run()
     {
         const auto seconds = glfwGetTime();
 
+
         // Put here rendering code
 		const auto fbSize = m_GLFWHandle.framebufferSize();
 
@@ -72,12 +73,14 @@ int Application::run()
     glBindVertexArray(m_triangleVAO);
     glDrawArrays(GL_TRIANGLES, 0, 3);
 
+
         // GUI code:
 		glmlv::imguiNewFrame();
 
         {
             ImGui::Begin("GUI");
             ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / ImGui::GetIO().Framerate, ImGui::GetIO().Framerate);
+
             ImGui::End();
         }
 
@@ -85,17 +88,21 @@ int Application::run()
 
         glfwPollEvents(); // Poll for and process events
 
+
         auto ellapsedTime = glfwGetTime() - seconds;
         auto guiHasFocus = ImGui::GetIO().WantCaptureMouse || ImGui::GetIO().WantCaptureKeyboard;
         if (!guiHasFocus) {
+
             // Put here code to handle user interactions
         }
 
 		m_GLFWHandle.swapBuffers(); // Swap front and back buffers
+
     }
 
     return 0;
 }
+
 
 Application::Application(int argc, char** argv):
     m_AppPath { glmlv::fs::path{ argv[0] } },
@@ -107,6 +114,4 @@ Application::Application(int argc, char** argv):
     ImGui::GetIO().IniFilename = m_ImGuiIniFilename.c_str(); // At exit, ImGUI will store its windows positions in this file
     // Put here code to run before rendering loop
 
-
-    // Put here initialization code
 }
