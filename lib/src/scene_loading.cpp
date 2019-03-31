@@ -1,229 +1,156 @@
-#include <glmlv/scene_loading.hpp>
+void loadglTFObjScene(const fs::path & objPath, const fs::path & mtlBaseDir, SceneData & data, bool loadTextures){
 
-#include <iostream>
-#include <unordered_map>
-#include <unordered_set>
-#include <string>
-#include <algorithm>
-#include <stack>
+    tinygltf::TinyGLTF Loader_;
+    tinygltf::Model Model_;
+    std::string err,warn;
+    bool ret = false;
 
-#include <assimp/Importer.hpp>
-#include <assimp/scene.h>
-#include <assimp/postprocess.h>
-#include <assimp/ProgressHandler.hpp>
+    //const std::string filename = "/home/karen/Documents/Synthese_image_avancé/openglnoel-cheat-gold2/models/box01.glb" ;
+    const std::string filename = "/home/karen/Documents/Synthese_image_avancé/openglnoel/models/test/DamagedHelmet.glb";
+    const std::string ext = GetFilePathExtension(filename);
 
-namespace glmlv
-{
+    if (ext == "glb") {
+    // binary glTF.
+    std::cout<<"Fichier de format glb"<<std::endl;
+    ret = Loader_.LoadBinaryFromFile(&Model_,&err,&warn,filename);
+    } else {
+    //ASCII glTF.
+    ret = Loader_.LoadASCIIFromFile(&Model_, &err, &warn, filename);
+    }
+ 
+    if (!err.empty()) { 
+        std::cerr << err << std::endl;
+    }
 
-glm::mat4 aiMatrixToGlmMatrix(const aiMatrix4x4 & mat)
-{
-	auto copy = mat;
-	copy.Transpose();
-	return glm::mat4(
-		copy.a1, copy.a2, copy.a3, copy.a4, 
-		copy.b1, copy.b2, copy.b3, copy.b4,
-		copy.c1, copy.c2, copy.c3, copy.c4, 
-		copy.d1, copy.d2, copy.d3, copy.d4
-	);
-}
+    if (!ret) {
+        throw std::runtime_error(err);
+    }
 
-void loadAssimpScene(const fs::path & objPath, const fs::path & mtlBaseDir, SceneData & data, bool loadTextures)
-{
-	Assimp::Importer importer;
-	const aiScene *scene = importer.ReadFile(objPath.string().c_str(), aiProcess_Triangulate);
+     //Affichage des données
+     std::cout << "Fichier glTF:\n"
+            << Model_.accessors.size() << " accessors\n"
+            << Model_.animations.size() << " animations\n"
+            << Model_.buffers.size() << " buffers\n"
+            << Model_.bufferViews.size() << " bufferViews\n"
+            << Model_.materials.size() << " materials\n"
+            << Model_.meshes.size() << " meshes\n"
+            << Model_.nodes.size() << " nodes\n"
+            << Model_.textures.size() << " textures\n"
+            << Model_.images.size() << " images\n"
+            << Model_.skins.size() << " skins\n"
+            << Model_.samplers.size() << " samplers\n"
+            << Model_.cameras.size() << " cameras\n"
+            << Model_.scenes.size() << " scenes\n"
+            << Model_.lights.size() << " lights\n";
 
-	if (!scene || scene->mFlags & AI_SCENE_FLAGS_INCOMPLETE || !scene->mRootNode) {
-		throw std::runtime_error(importer.GetErrorString());
-	}
+    for (const auto &meshs : Model_.meshes) {
+	std::cout << "Mesh courant " << meshs.primitives.size() << " primitives:\n";
 
-	std::stack<std::pair<aiNode*, aiMatrix4x4>> nodes;
-	nodes.push(std::make_pair(scene->mRootNode, scene->mRootNode->mTransformation));
+    	// Création mesh courant
+    	tinygltf::Mesh loadedMesh;
+    	
+	// To store the min and max of the buffer (as 3D vector of floats)
+    	v3f pMin = {}, pMax = {};
 
-	std::unordered_map<std::string, int32_t> textureIds;
+    	// Store the name of the glTF mesh (if defined)
+    	loadedMesh.name = meshs.name;
 
-	const auto materialIdOffset = data.materials.size();
+	for (const auto &primitive_ : meshs.primitives) {
+	    
+		//
+	    std::cout << "primitive courant " << primitive_.attributes.size() << " attributs,\n"
+	    		<< primitive_.indices << " indice,\n"
+	    		<< primitive_.mode << " mode,\n"
+	    		<< primitive_.material << " index materiel,\n"
+		   	<< primitive_.targets.size() <<" taille vecteur de map\n";
+
+	    for(const auto &t : primitive_.targets){
+		std::cout<<"taille map"<<t.size()<<"\n";
+		for (std::map<std::string,int>::const_iterator it=t.begin(); it!=t.end(); ++it)
+    			std::cout << it->first << " => " << it->second << '\n';
+
+	    }
+	    std::cout<<"target:\n";
+
+
+		//
+	    
+	    const auto &indicesAccessor = Model_.accessors[primitive_.indices];
+		std::cout<<"type accessor:"<<indicesAccessor.type<<std::endl;
+		std::cout<<"componentType accessor:"<<indicesAccessor.componentType<<std::endl;
+
+            const auto &bufferView = Model_.bufferViews[indicesAccessor.bufferView];//acces au buffer, un vao par primitive
+            const auto &buffer = Model_.buffers[bufferView.buffer];
+            const auto dataAddress = buffer.data.data() + bufferView.byteOffset +
+                                 indicesAccessor.byteOffset;
+            const auto byteStride = indicesAccessor.ByteStride(bufferView);
+            const auto count = indicesAccessor.count;
+
+
+//charger les buffer
+
+	    switch (meshPrimitive.mode) {
+		case TINYGLTF_MODE_TRIANGLES:  // this is the simplest case to handle
+
+        	{
+          		std::cout << "TRIANGLES\n";
+	    		for (auto &attrib : primitive_.attributes) {
+			 const auto attribAccessor = Model_.accessors[attribute.second];
+            		const auto &bufferView = Model_.bufferViews[attribAccessor.bufferView];
+            		const auto &buffer = Model_.buffers[bufferView.buffer];
+            		const auto dataPtr = buffer.data.data() + bufferView.byteOffset +
+                                 attribAccessor.byteOffset;
+            		const auto byte_stride = attribAccessor.ByteStride(bufferView);
+            		const auto count = attribAccessor.count;
+
+           		 std::cout << "current attribute has count " << count
+                      << " and stride " << byte_stride << " bytes\n";
+
+            		std::cout << "attribut : " << attrib.first << '\n';
+      			int vaa = -1;
+            		if (attrib.first == "POSITION") {
+             			 std::cout << "found position attribute\n";
+      				tinygltf::Accessor accessor = Model_.accessors[attrib.second];
+      				int byteStride = accessor.ByteStride(Model_.bufferViews[accessor.bufferView]);
+      				//glBindBuffer(GL_ARRAY_BUFFER, vbos[accessor.bufferView]);
+				
+ 				pMin.x = (float)attrib.minValues[0];
+              			pMin.y = (float)attrib.minValues[1];
+              			pMin.z = (float)attrib.minValues[2];
+              			pMax.x = (float)attrib.maxValues[0];
+             			pMax.y = (float)attrib.maxValues[1];
+              			pMax.z = (float)attrib.maxValues[2];
+      				int size = 1;
+      				if (accessor.type != TINYGLTF_TYPE_SCALAR) {
+        				size = accessor.type;
+      				}
+
+				vaa=0;
+				std::cout<<attrib.second<<std::endl;
+
+			}
+      			if (attrib.first.compare("NORMAL") == 0) { vaa = 1; std::cout<<attrib.second<<std::endl;}
+      			if (attrib.first.compare("TEXCOORD_0") == 0) { vaa = 2; std::cout<<attrib.second<<std::endl;}
+      			if (vaa > -1) {
+       		   	 	glEnableVertexAttribArray(vaa);
+         			glVertexAttribPointer(vaa, size, accessor.componentType,accessor.normalized ? GL_TRUE : GL_FALSE,
+                              byteStride, BUFFER_OFFSET(accessor.byteOffset));*/std::cout<<"ojfzof\n";
+      				}else{
+        	    			std::cout << "vaa missing: " << attrib.first << std::endl;
+				}
+
+6    	   		 }//fin attrib
+		}
+	    }
+	    
+
+	}//fin parcours primitive de Mesh
+    }//fin parcours mesh de model
+
 	
-	while (!nodes.empty())
-	{
-		const auto node = nodes.top().first;
-		const auto localToWorldMatrix = nodes.top().second;
-		nodes.pop();
-
-		data.shapeCount += node->mNumMeshes;
-
-		for (auto meshIdx = 0u; meshIdx < node->mNumMeshes; ++meshIdx)
-		{
-			aiMesh * mesh = scene->mMeshes[node->mMeshes[meshIdx]];
-
-			const auto indexOffset = data.vertexBuffer.size();
-
-			data.vertexBuffer.reserve(data.vertexBuffer.size() + mesh->mNumVertices);
-			for (auto vertexIdx = 0u; vertexIdx < mesh->mNumVertices; ++vertexIdx)
-			{
-				const float vx = mesh->HasPositions() ? mesh->mVertices[vertexIdx].x : 0.f;
-				const float vy = mesh->HasPositions() ? mesh->mVertices[vertexIdx].y : 0.f;
-				const float vz = mesh->HasPositions() ? mesh->mVertices[vertexIdx].z : 0.f;
-				const float nx = mesh->HasNormals() ? mesh->mNormals[vertexIdx].x : 0.f;
-				const float ny = mesh->HasNormals() ? mesh->mNormals[vertexIdx].y : 0.f;
-				const float nz = mesh->HasNormals() ? mesh->mNormals[vertexIdx].z : 0.f;
-
-				const float tx = mesh->HasTextureCoords(0) ? mesh->mTextureCoords[0][vertexIdx].x : 0.f;
-				const float ty = mesh->HasTextureCoords(0) ? mesh->mTextureCoords[0][vertexIdx].y : 0.f;
-
-				data.vertexBuffer.emplace_back(glm::vec3(vx, vy, vz), glm::vec3(nx, ny, nz), glm::vec2(tx, ty));
-			}
-
-			const auto indexCount = mesh->mNumFaces * 3;
-			data.indexCountPerShape.emplace_back(indexCount);
-			data.localToWorldMatrixPerShape.emplace_back(aiMatrixToGlmMatrix(localToWorldMatrix));
-			data.indexBuffer.reserve(data.indexBuffer.size() + indexCount);
-			for (unsigned int i = 0; i < mesh->mNumFaces; i++)
-			{
-				aiFace face = mesh->mFaces[i];
-				assert(face.mNumIndices == 3);
-				for (unsigned int j = 0; j < face.mNumIndices; j++) 
-				{
-					const auto index = indexOffset + face.mIndices[j];
-					data.indexBuffer.emplace_back(index);
-					data.bboxMin = glm::min(data.bboxMin, data.vertexBuffer[index].position);
-					data.bboxMax = glm::max(data.bboxMax, data.vertexBuffer[index].position);
-				}
-			}
-
-			data.materialIDPerShape.emplace_back(mesh->mMaterialIndex >= 0 ? materialIdOffset + mesh->mMaterialIndex : -1);
-
-			// Store texture paths to load them later
-			if (loadTextures && mesh->mMaterialIndex >= 0)
-			{
-				aiMaterial * material = scene->mMaterials[mesh->mMaterialIndex];
-
-				aiString path;
-				if (AI_SUCCESS == material->GetTexture(aiTextureType_AMBIENT, 0, &path,
-					nullptr, nullptr, nullptr, nullptr, nullptr)) {
-					textureIds[path.data] = -1;
-				}
-
-				if (AI_SUCCESS == material->GetTexture(aiTextureType_DIFFUSE, 0, &path,
-					nullptr, nullptr, nullptr, nullptr, nullptr)) {
-					textureIds[path.data] = -1;
-				}
-
-				if (AI_SUCCESS == material->GetTexture(aiTextureType_SPECULAR, 0, &path,
-					nullptr, nullptr, nullptr, nullptr, nullptr)) {
-					textureIds[path.data] = -1;
-				}
-
-				if (AI_SUCCESS == material->GetTexture(aiTextureType_SHININESS, 0, &path,
-					nullptr, nullptr, nullptr, nullptr, nullptr)) {
-					textureIds[path.data] = -1;
-				}
-			}
-		}
-
-		for (auto childIdx = 0u; childIdx < node->mNumChildren; ++childIdx) {
-			nodes.push(std::make_pair(node->mChildren[childIdx], node->mChildren[childIdx]->mTransformation * localToWorldMatrix));
-		}
-	}
-
-	if (loadTextures)
-	{
-		for (const auto & keyVal : textureIds)
-		{
-			const auto completePath = mtlBaseDir / keyVal.first;
-			if (fs::exists(completePath))
-			{
-				std::clog << "Loading image " << completePath << std::endl;
-				textureIds[keyVal.first] = data.textures.size();
-				data.textures.emplace_back(readImage(completePath));
-				data.textures.back().flipY();
-			}
-			else
-			{
-				std::clog << "'Warning: image " << completePath << " not found" << std::endl;
-			}
-		}
-	}
-
-	// Materials
-	data.materials.reserve(data.materials.size() + scene->mNumMaterials);
-	for (auto materialIdx = 0u; materialIdx < scene->mNumMaterials; ++materialIdx)
-	{
-		aiMaterial * material = scene->mMaterials[materialIdx];
-
-		data.materials.emplace_back(); // Add new material
-		auto & newMaterial = data.materials.back();
-
-		aiColor3D color;
-
-		aiString ainame;
-		material->Get(AI_MATKEY_NAME, ainame);
-		newMaterial.name = ainame.C_Str();
-
-		if (newMaterial.name == "Helmet")
-		{
-			std::clog << "Material " << newMaterial.name << std::endl;
-			std::clog << material->mNumProperties << std::endl;
-			for (auto i = 0; i < material->mNumProperties; ++i)
-			{
-				std::clog << "Property " << material->mProperties[i]->mKey.C_Str() << ", " << material->mProperties[i]->mType << ", " << material->mProperties[i]->mIndex << std::endl;
-				if (material->mProperties[i]->mType == aiPTI_String)
-				{
-					aiString x;
-					material->Get(material->mProperties[i]->mKey.C_Str(), material->mProperties[i]->mSemantic, material->mProperties[i]->mIndex, x);
-
-					std::clog << material->mProperties[i]->mKey.C_Str() << ", " << "Value = " << x.C_Str() << std::endl;
-				}
-			}
-
-			for (auto i = 0; i < material->GetTextureCount(aiTextureType_UNKNOWN); ++i)
-			{
-				aiString path;
-				if (AI_SUCCESS == material->GetTexture(aiTextureType_UNKNOWN, i, &path,
-					nullptr, nullptr, nullptr, nullptr, nullptr)) {
-					std::cerr << "texture " << i << path.C_Str() << std::endl;
-				}
-			}
-		}
 
 
-		if (AI_SUCCESS == material->Get(AI_MATKEY_COLOR_AMBIENT, color)) {
-			newMaterial.Ka = glm::vec3(color.r, color.g, color.b);
-		}
+}//fin load tiny_gltf
 
-		if (AI_SUCCESS == material->Get(AI_MATKEY_COLOR_DIFFUSE, color)) {
-			newMaterial.Kd = glm::vec3(color.r, color.g, color.b);
-		}
 
-		if (AI_SUCCESS == material->Get(AI_MATKEY_COLOR_SPECULAR, color)) {
-			newMaterial.Ks = glm::vec3(color.r, color.g, color.b);
-		}
-
-		material->Get(AI_MATKEY_SHININESS, newMaterial.shininess);
-
-		if (loadTextures)
-		{
-			aiString path;
-			if (AI_SUCCESS == material->GetTexture(aiTextureType_AMBIENT, 0, &path,
-				nullptr, nullptr, nullptr, nullptr, nullptr)) {
-				newMaterial.KaTextureId = textureIds[path.data];
-			}
-
-			if (AI_SUCCESS == material->GetTexture(aiTextureType_DIFFUSE, 0, &path,
-				nullptr, nullptr, nullptr, nullptr, nullptr)) {
-				newMaterial.KdTextureId = textureIds[path.data];
-			}
-
-			if (AI_SUCCESS == material->GetTexture(aiTextureType_SPECULAR, 0, &path,
-				nullptr, nullptr, nullptr, nullptr, nullptr)) {
-				newMaterial.KsTextureId = textureIds[path.data];
-			}
-
-			if (AI_SUCCESS == material->GetTexture(aiTextureType_SHININESS, 0, &path,
-				nullptr, nullptr, nullptr, nullptr, nullptr)) {
-				newMaterial.shininessTextureId = textureIds[path.data];
-			}
-		}
-	}
-}
-
-}
+}//fin namespace
